@@ -33,7 +33,9 @@ public class MainWindow extends JFrame {
 	public MainWindow(BufferedImage i) {
 		warp = i;
 		original = new BufferedImage(i.getWidth(), i.getHeight(), i.getType());
-		points = new Point2D.Double[] { new Point2D.Double(0, 0), new Point2D.Double(original.getWidth(), 0), new Point2D.Double(original.getWidth(), original.getHeight()), new Point2D.Double(0, original.getHeight()) };
+		points = new Point2D.Double[] { new Point2D.Double(0, 0), new Point2D.Double(original.getWidth(), 0),
+				new Point2D.Double(original.getWidth(), original.getHeight()),
+				new Point2D.Double(0, original.getHeight()) };
 		Graphics g = original.getGraphics();
 		g.drawImage(i, 0, 0, null);
 		g.dispose();
@@ -51,10 +53,16 @@ public class MainWindow extends JFrame {
 		p.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseReleased(MouseEvent arg0) {
-				if (arg0.getButton() == MouseEvent.BUTTON2)
-					n = n == 3 ? 0 : n + 1;
-				else if (arg0.getButton() == MouseEvent.BUTTON3) {
-					points = new Point2D.Double[] { new Point2D.Double(0, 0), new Point2D.Double(original.getWidth(), 0), new Point2D.Double(original.getWidth(), original.getHeight()), new Point2D.Double(0, original.getHeight()) };
+				if (arg0.getButton() == MouseEvent.BUTTON1) {
+					for (int i = 0; i < points.length; i++)
+						if (arg0.getX() >= points[i].x - 5 && arg0.getX() <= points[i].x + 5
+								&& arg0.getY() >= points[i].y - 5 && arg0.getY() <= points[i].y + 5)
+							n = i;
+				} else if (arg0.getButton() == MouseEvent.BUTTON3) {
+					points = new Point2D.Double[] { new Point2D.Double(0, 0),
+							new Point2D.Double(original.getWidth(), 0),
+							new Point2D.Double(original.getWidth(), original.getHeight()),
+							new Point2D.Double(0, original.getHeight()) };
 					Graphics g = warp.getGraphics();
 					g.drawImage(original, 0, 0, null);
 					g.dispose();
