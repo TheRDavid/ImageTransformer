@@ -15,7 +15,7 @@ public class Transformer {
 	private static int[] i = new int[3];
 	private static WritableRaster inRaster, outRaster;
 
-	public static void warp_forward(BufferedImage original, BufferedImage warp,float[][] coords) {
+	public static void warp_forward(BufferedImage original, BufferedImage warp, float[][] coords) {
 		Graphics g = warp.getGraphics();
 		g.clearRect(0, 0, warp.getWidth(), warp.getHeight()); // clear
 
@@ -51,10 +51,11 @@ public class Transformer {
 		System.out.println("warp_foward: " + (System.currentTimeMillis() - start) / 1000);
 	}
 
-	public static void warp_forward_debug(BufferedImage original, BufferedImage warp, float[][] coords, int px, int py) {
-		Graphics g = warp.getGraphics();
+	public static void warp_forward_debug(BufferedImage original, BufferedImage debug, float[][] coords, int px,
+			int py) {
+		Graphics g = debug.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
-		g.clearRect(0, 0, warp.getWidth(), warp.getHeight()); // clear
+		g.clearRect(0, 0, debug.getWidth(), debug.getHeight()); // clear
 		AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .25f);
 		g2d.setComposite(ac);
 		g2d.drawImage(original, 0, 0, null);
@@ -83,8 +84,10 @@ public class Transformer {
 		float y_new = y_start + y_share * y_length; // position on warped y axis
 
 		g.setColor(Color.white);
-		g.drawLine((int) x_start, (int) y_new, (int) x_end, (int) y_new);
-		g.drawLine((int) x_new, (int) y_start, (int) x_new, (int) y_end);
+		g.drawLine((int) (coords[0][0] + (coords[1][0] - coords[0][0]) * x_share), (int) y_start,
+				(int) (coords[3][0] + (coords[2][0] - coords[3][0]) * x_share), (int) y_end);
+		g.drawLine((int) x_start, (int) (coords[0][1] + (coords[3][1] - coords[0][1]) * y_share), (int) x_end,
+				(int) (coords[1][1] + (coords[2][1] - coords[1][1]) * y_share));
 		g.drawLine((int) coords[0][0], (int) coords[0][1], (int) coords[1][0], (int) coords[1][1]);
 		g.drawLine((int) coords[1][0], (int) coords[1][1], (int) coords[2][0], (int) coords[2][1]);
 		g.drawLine((int) coords[2][0], (int) coords[2][1], (int) coords[3][0], (int) coords[3][1]);
@@ -118,23 +121,34 @@ public class Transformer {
 		//System.out.println((System.currentTimeMillis()-start)/1000);
 	}
 
-	public static void warp_backward_debug(BufferedImage original, BufferedImage warp, float[][] coords, int px, int py) {
-		Graphics g = warp.getGraphics();
+	public static void warp_backward_debug(BufferedImage original, BufferedImage debug, float[][] coords, int px,
+			int py) {
+		Graphics g = debug.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
-		g.clearRect(0, 0, warp.getWidth(), warp.getHeight()); // clear
+		g.clearRect(0, 0, debug.getWidth(), debug.getHeight()); // clear
 		AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .25f);
 		g2d.setComposite(ac);
 		g2d.drawImage(original, 0, 0, null);
 		ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f);
 		g2d.setComposite(ac);
-		
+
 		g.drawLine((int) coords[0][0], (int) coords[0][1], (int) coords[1][0], (int) coords[1][1]);
 		g.drawLine((int) coords[1][0], (int) coords[1][1], (int) coords[2][0], (int) coords[2][1]);
 		g.drawLine((int) coords[2][0], (int) coords[2][1], (int) coords[3][0], (int) coords[3][1]);
 		g.drawLine((int) coords[3][0], (int) coords[3][1], (int) coords[0][0], (int) coords[0][1]);
-		
-		float[][] coords_sorted_by_x = new float[4][2];
-		
+
+		g.setColor(Color.orange);
+		float[][] sortedCoords = simpleSort(coords, 0); // sorted left to right, order stored with chars
+
+		for (int i = 0; i < sortedCoords.length; i++) {
+			g2d.drawString((char) sortedCoords[i][2] + "", sortedCoords[i][0] + 20, sortedCoords[i][1] + 10);
+		}
+
+		float[][] neighbours = get_neighbours(sortedCoords, 0);
+		System.out.println("For " + (char) sortedCoords[0][2] + ": Neighbour 1: " + (char) neighbours[0][2] + ", 2: "
+				+ (char) neighbours[1][2]);
+
+		g.setColor(Color.red);
 		
 		/*	
 		 * when left_length > right_length
@@ -150,6 +164,86 @@ public class Transformer {
 		*/
 
 		//System.out.println((System.currentTimeMillis()-start)/1000);
+	}
+
+	private static float[][] get_neighbours(float[][] coords, int idx) {
+		float[][] neighbours = new float[2][3];
+		char c = (char) coords[idx][2];
+		if (c == 'A') {
+			for (int i = 0; i < coords.length; i++) {
+				if (coords[i][2] == 'D') {
+					neighbours[0][0] = coords[i][0];
+					neighbours[0][1] = coords[i][1];
+					neighbours[0][2] = 'D';
+				} else if (coords[i][2] == 'B') {
+					neighbours[1][0] = coords[i][0];
+					neighbours[1][1] = coords[i][1];
+					neighbours[1][2] = 'B';
+				}
+			}
+		} else if (c == 'B') {
+			for (int i = 0; i < coords.length; i++) {
+				if (coords[i][2] == 'A') {
+					neighbours[0][0] = coords[i][0];
+					neighbours[0][1] = coords[i][1];
+					neighbours[0][2] = 'A';
+				} else if (coords[i][2] == 'C') {
+					neighbours[1][0] = coords[i][0];
+					neighbours[1][1] = coords[i][1];
+					neighbours[1][2] = 'C';
+				}
+			}
+		} else if (c == 'C') {
+			for (int i = 0; i < coords.length; i++) {
+				if (coords[i][2] == 'B') {
+					neighbours[0][0] = coords[i][0];
+					neighbours[0][1] = coords[i][1];
+					neighbours[0][2] = 'B';
+				} else if (coords[i][2] == 'D') {
+					neighbours[1][0] = coords[i][0];
+					neighbours[1][1] = coords[i][1];
+					neighbours[1][2] = 'D';
+				}
+			}
+		} else {
+			for (int i = 0; i < coords.length; i++) {
+				if (coords[i][2] == 'C') {
+					neighbours[0][0] = coords[i][0];
+					neighbours[0][1] = coords[i][1];
+					neighbours[0][2] = 'C';
+				} else if (coords[i][2] == 'A') {
+					neighbours[1][0] = coords[i][0];
+					neighbours[1][1] = coords[i][1];
+					neighbours[1][2] = 'A';
+				}
+			}
+		}
+		return neighbours;
+	}
+
+	private static float[][] simpleSort(float[][] coords, int idx) {
+		float[][] newCoords = new float[coords.length][3];
+		for (int i = 0; i < coords.length; i++) {
+			newCoords[i][0] = coords[i][0];
+			newCoords[i][1] = coords[i][1];
+			newCoords[i][2] = i + 65;
+		}
+		for (int i = 0; i < coords.length; i++) {
+			for (int j = i; j < coords.length; j++) {
+				if (newCoords[i][idx] > newCoords[j][idx]) {
+					float temp0 = newCoords[i][0];
+					float temp1 = newCoords[i][1];
+					float temp2 = newCoords[i][2];
+					newCoords[i][0] = newCoords[j][0];
+					newCoords[i][1] = newCoords[j][1];
+					newCoords[i][2] = newCoords[j][2];
+					newCoords[j][0] = temp0;
+					newCoords[j][1] = temp1;
+					newCoords[j][2] = temp2;
+				}
+			}
+		}
+		return newCoords;
 	}
 
 	public static void main(String[] args) {

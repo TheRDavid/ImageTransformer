@@ -113,8 +113,8 @@ public class MainWindow extends JFrame {
 			for (int i = 0; i < points.length; i ++) {
 				arg0.setColor(Color.blue);
 				if (i == n)
-					arg0.setColor(Color.RED);
-				arg0.fillRect((int) points[i][0] - handleSize / 2, (int) points[i][1] - handleSize / 2, handleSize,
+					arg0.setColor(Color.YELLOW);
+				arg0.fillOval((int) points[i][0] - handleSize / 2, (int) points[i][1] - handleSize / 2, handleSize,
 						handleSize);
 			}
 		};
