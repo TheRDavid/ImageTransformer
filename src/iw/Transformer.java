@@ -145,11 +145,36 @@ public class Transformer {
 		}
 
 		float[][] neighbours = get_neighbours(sortedCoords, 0);
-		System.out.println("For " + (char) sortedCoords[0][2] + ": Neighbour 1: " + (char) neighbours[0][2] + ", 2: "
-				+ (char) neighbours[1][2]);
+		//System.out.println("For " + (char) sortedCoords[0][2] + ": Neighbour 1: " + (char) neighbours[0][2] + ", 2: "
+		//			+ (char) neighbours[1][2]);
+
+		float[][] diffs = { { neighbours[0][0] - sortedCoords[0][0], neighbours[0][1] - sortedCoords[0][1] },
+				{ neighbours[1][0] - sortedCoords[0][0], neighbours[1][1] - sortedCoords[0][1] } };
+
+		double dist0 = Math.sqrt(diffs[0][0] * diffs[0][0] + diffs[0][1] * diffs[0][1]);
+		double dist1 = Math.sqrt(diffs[1][0] * diffs[1][0] + diffs[1][1] * diffs[1][1]);
+
+		int neighS = dist0 > dist1 ? 0 : 1;
+		int neighAx = Math.abs(diffs[neighS][0]) > Math.abs(diffs[neighS][1]) ? 0 : 1;
+
+		System.out.println((char) sortedCoords[0][2] + " has biggest distance to " + (char) neighbours[neighS][2]
+				+ " on the " + (neighAx == 0 ? "x" : "y") + " axis");
+
+		float ratio = diffs[neighS][1 - neighAx] / diffs[neighS][neighAx];
+
+		for (float i = sortedCoords[0][neighAx], j = sortedCoords[0][1 - neighAx]; Math
+				.abs(i - neighbours[neighS][neighAx]) > .1f; i++, j += ratio) {
+			if(neighAx == 0)
+			{
+				g.drawLine((int)i, (int)sortedCoords[0][1], (int)i, (int)j);
+			} else
+			{
+				g.drawLine((int)sortedCoords[0][0], (int)i, (int)j, (int)i);
+			}
+		}
 
 		g.setColor(Color.red);
-		
+
 		/*	
 		 * when left_length > right_length
 			1. for each left_y on left_side, find y on right side
