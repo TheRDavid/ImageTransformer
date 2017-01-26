@@ -123,6 +123,8 @@ public class Transformer {
 
 	public static void warp_backward_debug(BufferedImage original, BufferedImage debug, float[][] coords, int px,
 			int py) {
+		inRaster = original.getRaster();
+		outRaster = debug.getRaster();
 		Graphics g = debug.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
 		g.clearRect(0, 0, debug.getWidth(), debug.getHeight()); // clear
@@ -148,47 +150,142 @@ public class Transformer {
 		//System.out.println("For " + (char) sortedCoords[0][2] + ": Neighbour 1: " + (char) neighbours[0][2] + ", 2: "
 		//			+ (char) neighbours[1][2]);
 
-		float[][] diffs = { { neighbours[0][0] - sortedCoords[0][0], neighbours[0][1] - sortedCoords[0][1] },
+		float[][] diffs0 = { { neighbours[0][0] - sortedCoords[0][0], neighbours[0][1] - sortedCoords[0][1] },
 				{ neighbours[1][0] - sortedCoords[0][0], neighbours[1][1] - sortedCoords[0][1] } };
 
-		double dist0 = Math.sqrt(diffs[0][0] * diffs[0][0] + diffs[0][1] * diffs[0][1]);
-		double dist1 = Math.sqrt(diffs[1][0] * diffs[1][0] + diffs[1][1] * diffs[1][1]);
+		/*
+		 * diffs[0][0] x difference to neighbour 0, FURTHEST: 0,0
+		 * diffs[0][1] y difference to neighbour 0, FURTHEST: 0,1
+		 * diffs[1][0] x difference to neighbour 1, FURTHEST: 1,0
+		 * diffs[1][1] y difference to neighbour 1, FURTHEST: 1,1
+		 */
 
-		int neighS = dist0 > dist1 ? 0 : 1;
-		int neighAx = Math.abs(diffs[neighS][0]) > Math.abs(diffs[neighS][1]) ? 0 : 1;
+		int[] furthest0 = furthest(diffs0);
 
-		System.out.println((char) sortedCoords[0][2] + " has biggest distance to " + (char) neighbours[neighS][2]
-				+ " on the " + (neighAx == 0 ? "x" : "y") + " axis");
+		float xstep0 = diffs0[0][0] / diffs0[furthest0[0]][furthest0[1]];
+		float xstep1 = diffs0[1][0] / diffs0[furthest0[0]][furthest0[1]];
+		float ystep0 = diffs0[0][1] / diffs0[furthest0[0]][furthest0[1]];
+		float ystep1 = diffs0[1][1] / diffs0[furthest0[0]][furthest0[1]];
 
-		float ratio = diffs[neighS][1 - neighAx] / diffs[neighS][neighAx];
+		for (float x0 = sortedCoords[0][0], x1 = x0, y0 = sortedCoords[0][1], y1 = y0; x0 < neighbours[0][0]
+				&& x1 < neighbours[1][0]; x0 += xstep0, x1 += xstep1, y0 += ystep0, y1 += ystep1) {
+			//g.drawLine(Math.round(x0), Math.round(y0), Math.round(x1), Math.round( y1));
+			if (y0 < original.getHeight() && y1 < original.getHeight() && y0 >= 0 && y1 >= 1) {
+				int _x0 = (int) (x0), _y0 = (int) (y0);
+				int _x1 = (int) (x1), _y1 = (int) (y1);
+				float fdy = _y1 - _y0;
+				float fdx = _x1 - _x0;
+				int dy, dx;
+				if (fdy < 0 && fdy > -1)
+					dy = -1;
+				else if (fdy > 0 && fdy < 1)
+					dy = 1;
+				else
+					dy = (int) (y1 - y0);
+				if (fdx < 0 && fdx > -1)
+					dx = -1;
+				else if (fdx > 0 && fdx < 1)
+					dx = 1;
+				else
+					dx = (int) (x1 - x0);
+				int sx, sy;
 
-		for (float i = sortedCoords[0][neighAx], j = sortedCoords[0][1 - neighAx]; Math
-				.abs(i - neighbours[neighS][neighAx]) > .1f; i++, j += ratio) {
-			if(neighAx == 0)
-			{
-				g.drawLine((int)i, (int)sortedCoords[0][1], (int)i, (int)j);
-			} else
-			{
-				g.drawLine((int)sortedCoords[0][0], (int)i, (int)j, (int)i);
+				if (dy < 0) {
+					dy = -dy;
+					sy = -1;
+				} else
+					sy = 1;
+
+				if (dx < 0) {
+					dx = -dx;
+					sx = -1;
+				} else
+					sx = 1;
+
+				System.out.println("outer loop: x0=" + x0 + ", y0=" + y0 + ", x1=" + x1 + ", y1=" + y1 + ", dy=" + dy
+						+ ", dx=" + dx + ", sy=" + sy + ", sx=" + sx);
+				//g.fillRect(_x0, _y0, 1, 1);
+				//outRaster.setPixel((int) _x0, (int) _y0, inRaster.getPixel(_x0, _y0, i));
+				if (dx > dy) {
+					int frac = dy - (dx >> 1);
+					while (_x0 != _x1) {
+						System.out.println("x inner loop: " + _x0 + "!=" + _x1);
+						if (frac >= 0) {
+							_y0 += sy;
+							frac -= dx;
+						}
+						_x0 += sx;
+						frac += dy;
+						outRaster.setPixel((int) _x0, (int) _y0, inRaster.getPixel(_x0, _y0, i));
+					}
+				} else {
+					int frac = dx - (dy >> 1);
+					while (_y0 != _y1) {
+						System.out.println("y inner loop: " + _y0 + "!=" + _y1);
+						if (frac >= 0) {
+							_x0 += sx;
+							frac -= dy;
+						}
+						_y0 += sy;
+						frac += dx;
+						outRaster.setPixel((int) _x0, (int) _y0, inRaster.getPixel(_x0, _y0, i));
+					}
+				}
 			}
+
+			/*
+			
+			if (diffs[0][0] > diffs[1][0]) // neighbour 0 x is further
+			{
+				float xstep0 = 1, xstep1 = (diffs[1][0] / diffs[0][0]);
+				float ystep0 = diffs[0][1] / diffs[0][0], ystep1 = diffs[1][1] / diffs[0][0];
+				float x0 = sortedCoords[0][0], x1 = x0, y0 = sortedCoords[0][1], y1 = y0;
+				while (x0 < neighbours[0][0] && x1 < neighbours[1][0]) {
+					g.drawLine((int) x0, (int) y0, (int) x1, (int) y1);
+					x0 += xstep0;
+					x1 += xstep1;
+					y0 += ystep0;
+					y1 += ystep1;
+				}
+			}*/
+
+			g.setColor(Color.red);
+
+			/*	
+			 * when left_length > right_length
+				1. for each left_y on left_side, find y on right side
+					1.1 find y_share
+					1.2 right_y = y_share times right_length + by
+					1.3 find x on left side
+						ad_diffx = abs(ax-dx)
+						left_x = y_share * ad_diffx + min(ax, dx)
+						bc_diffx = abs(cx-bx)
+						right_x = y_share * bc_diffx + min(bx, cx)
+				2. travel between the 2 points
+			*/
+
+			//System.out.println((System.currentTimeMillis()-start)/1000);
+		}
+	}
+
+	private static int[] furthest(float[][] diffs) {
+		int i[] = { 0, 0 };
+		float f = diffs[0][0];
+
+		if (diffs[0][1] > f) {
+			f = diffs[0][1];
+			i = new int[] { 0, 1 };
 		}
 
-		g.setColor(Color.red);
+		if (diffs[1][0] > f) {
+			f = diffs[1][0];
+			i = new int[] { 1, 0 };
+		}
 
-		/*	
-		 * when left_length > right_length
-			1. for each left_y on left_side, find y on right side
-				1.1 find y_share
-				1.2 right_y = y_share times right_length + by
-				1.3 find x on left side
-					ad_diffx = abs(ax-dx)
-					left_x = y_share * ad_diffx + min(ax, dx)
-					bc_diffx = abs(cx-bx)
-					right_x = y_share * bc_diffx + min(bx, cx)
-			2. travel between the 2 points
-		*/
+		if (diffs[1][1] > f)
+			i = new int[] { 1, 1 };
 
-		//System.out.println((System.currentTimeMillis()-start)/1000);
+		return i;
 	}
 
 	private static float[][] get_neighbours(float[][] coords, int idx) {
