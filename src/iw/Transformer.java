@@ -108,7 +108,28 @@ public class Transformer {
 		}
 	}
 
-	public static void scale(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
+	public static void scale_nn_forward(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		for (int x = 0; x < original.getWidth(); x++) {
+			int xn = (int) (scalePoints[0] * x);
+			if (xn >= 0 && xn < original.getWidth())
+				for (int y = 0; y < original.getHeight(); y++) {
+					int yn = (int) (scalePoints[1] * y);
+					if (yn >= 0 && yn < original.getHeight())
+						outRaster.setPixel(xn, yn, inRaster.getPixel(x, y, i));
+				}
+		}
+	}
+
+	public static void scale_nn_forward_debug(BufferedImage original, BufferedImage debugImage, float[] scalePoints,
+			int j, int k) {
+
+	}
+
+	public static void scale_nn_backward(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
 		Graphics g = transformImage.getGraphics();
 		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
 		int w = (int) (original.getWidth() * scalePoints[0]);
@@ -127,8 +148,49 @@ public class Transformer {
 		}
 	}
 
-	public static void scale(BufferedImage original, BufferedImage debugImage, float[] scalePoints, int j, int k) {
-		// TODO Auto-generated method stub
+	public static void scale_bl_backward(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		int w = (int) (original.getWidth() * scalePoints[0]);
+		int h = (int) (original.getHeight() * scalePoints[1]);
+		float nx = 1 / scalePoints[0];
+		float ny = 1 / scalePoints[1];
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		for (int x = 0; x < w; x++) {
+			float oldCol = nx * x;
+			int leftCol = (int) Math.floor(oldCol);
+			int rightCol = (int) Math.ceil(oldCol);
+			rightCol = rightCol < original.getWidth() ? rightCol : original.getWidth() - 1;
+			double rightShare = oldCol % 1;
+			double leftShare = (1 - rightShare);
+			if (x >= 0 && x < original.getWidth())
+				for (int y = 0; y < h; y++) {
+					float oldRow = ny * y;
+					double lowerShare = oldRow % 1;
+					double upperShare = (1 - lowerShare);
+					int upperRow = (int) Math.floor(oldRow);
+					int lowerRow = (int) Math.ceil(oldRow);
+					lowerRow = lowerRow < original.getHeight() ? lowerRow : original.getHeight() - 1;
+
+					int interpolatedColor[] = new int[i.length];
+					for (int ink = 0; ink < i.length; ink++) {
+						interpolatedColor[ink] += inRaster.getPixel(leftCol, upperRow, i)[ink] * upperShare * leftShare;
+						interpolatedColor[ink] += inRaster.getPixel(rightCol, upperRow, i)[ink] * upperShare
+								* rightShare;
+						interpolatedColor[ink] += inRaster.getPixel(leftCol, lowerRow, i)[ink] * lowerShare * leftShare;
+						interpolatedColor[ink] += inRaster.getPixel(rightCol, lowerRow, i)[ink] * lowerShare
+								* rightShare;
+					}
+
+					if (y >= 0 && y < original.getHeight())
+						outRaster.setPixel(x, y, interpolatedColor);
+				}
+		}
+	}
+
+	public static void scale_nn_backward_debug(BufferedImage original, BufferedImage debugImage, float[] scalePoints,
+			int j, int k) {
 
 	}
 }

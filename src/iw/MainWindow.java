@@ -19,21 +19,21 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 public class MainWindow extends JFrame {
-	int handleSize = 16;
+	private int handleSize = 16;
 	private BufferedImage transformImage, debugImage, original;
 	private BuffViewer transformPanel, debugPanel;
 	private int n = 0;
 
 	private float distortPoints[][] = new float[4][2];
 
-	private char scaleNames[] = { 'x', 'y'};
+	private char scaleNames[] = { 'x', 'y' };
 	private float scalePoints[] = new float[2];
 
 	private enum modeType {
-		DISTORT, SCALE_NEAREST_NEIGHBOUR
+		DISTORT, SCALE_NEAREST_NEIGHBOUR_BACKWARD, SCALE_NEAREST_NEIGHBOUR_FORWARD, SCALE_BILINEAR_BACKWARD
 	};
 
-	private JComboBox<modeType> modeCombobox = new JComboBox<>(new modeType[] { modeType.DISTORT, modeType.SCALE_NEAREST_NEIGHBOUR });
+	private JComboBox<modeType> modeCombobox = new JComboBox<>(modeType.values());
 	private Font f = new Font("Arial", Font.BOLD, 18);
 
 	public MainWindow(BufferedImage i) {
@@ -54,7 +54,7 @@ public class MainWindow extends JFrame {
 		distortPoints[2][0] = i.getWidth();
 		distortPoints[2][1] = i.getHeight();
 		distortPoints[3][1] = i.getHeight();
-		
+
 		scalePoints[0] = 1;
 		scalePoints[1] = 1;
 
@@ -91,10 +91,18 @@ public class MainWindow extends JFrame {
 						distortPoints[n][1] = arg0.getY();
 						Transformer.distort(original, transformImage, distortPoints);
 						Transformer.distort_debug(original, debugImage, distortPoints, 70, 70);
-					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_BACKWARD)) {
 						scalePoints[n] = xToScale(arg0.getX());
-						Transformer.scale(original, transformImage, scalePoints);
-						Transformer.scale(original, debugImage, scalePoints, 70, 70);
+						Transformer.scale_nn_backward(original, transformImage, scalePoints);
+						Transformer.scale_nn_backward_debug(original, debugImage, scalePoints, 70, 70);
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_FORWARD)) {
+						scalePoints[n] = xToScale(arg0.getX());
+						Transformer.scale_nn_forward(original, transformImage, scalePoints);
+						Transformer.scale_nn_forward_debug(original, debugImage, scalePoints, 70, 70);
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_BILINEAR_BACKWARD)) {
+						scalePoints[n] = xToScale(arg0.getX());
+						Transformer.scale_bl_backward(original, transformImage, scalePoints);
+						Transformer.scale_nn_forward_debug(original, debugImage, scalePoints, 70, 70);
 					}
 					repaintEmAll();
 					super.mouseDragged(arg0);
@@ -121,7 +129,9 @@ public class MainWindow extends JFrame {
 							g.drawImage(original, 0, 0, null);
 							g.dispose();
 						}
-					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_BILINEAR_BACKWARD)
+							|| modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_BACKWARD)
+							|| modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_FORWARD)) {
 						if (arg0.getButton() == MouseEvent.BUTTON1) {
 							for (int i = 0; i < scalePoints.length; i++)
 								if (arg0.getX() >= (int) (scaleToX(scalePoints[i]) - handleSize / 2)
@@ -152,7 +162,9 @@ public class MainWindow extends JFrame {
 					arg0.fillOval((int) distortPoints[i][0] - handleSize / 2,
 							(int) distortPoints[i][1] - handleSize / 2, handleSize, handleSize);
 				}
-			} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+			} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_BILINEAR_BACKWARD)
+					|| modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_BACKWARD)
+					|| modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_FORWARD)) {
 				arg0.setFont(f);
 				for (int i = 0; i < scalePoints.length; i++) {
 					arg0.setColor(Color.BLUE);
@@ -160,7 +172,7 @@ public class MainWindow extends JFrame {
 						arg0.setColor(Color.RED);
 					float x = (int) scaleToX(scalePoints[i]);
 					float y = i * (original.getHeight() - 50) / scalePoints.length + 25;
-					arg0.drawString(scaleNames[i] + ": "+scalePoints[i], (int) x, (int) y - handleSize / 3 * 2);
+					arg0.drawString(scaleNames[i] + ": " + scalePoints[i], (int) x, (int) y - handleSize / 3 * 2);
 					arg0.fillOval((int) x, (int) y, handleSize, handleSize);
 				}
 			}
@@ -168,12 +180,12 @@ public class MainWindow extends JFrame {
 
 	}
 
-	float scaleToX(float ec) {
-		return ec * (original.getWidth() - 50) + 25;
+	float scaleToX(float s) {
+		return s * (original.getWidth() / 3 - 50) + 25;
 	}
 
 	float xToScale(float x) {
-		return x / (original.getWidth() - 25);
+		return x / (original.getWidth() / 3 - 25);
 	}
 
 }
