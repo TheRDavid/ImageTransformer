@@ -51,8 +51,7 @@ public class Transformer {
 		System.out.println("warp_foward: " + (System.currentTimeMillis() - start) / 1000);
 	}
 
-	public static void distort_debug(BufferedImage original, BufferedImage debug, float[][] coords, int px,
-			int py) {
+	public static void distort_debug(BufferedImage original, BufferedImage debug, float[][] coords, int px, int py) {
 		Graphics g = debug.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
 		g.clearRect(0, 0, debug.getWidth(), debug.getHeight()); // clear
@@ -99,8 +98,6 @@ public class Transformer {
 		g.drawRect((int) px - 4, (int) py - 4, 8, 8);
 	}
 
-	
-
 	public static void main(String[] args) {
 		try {
 			BufferedImage original = ImageIO.read(new File("image.png"));
@@ -109,5 +106,29 @@ public class Transformer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	public static void scale(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		int w = (int) (original.getWidth() * scalePoints[0]);
+		int h = (int) (original.getHeight() * scalePoints[1]);
+		float nx = 1 / scalePoints[0];
+		float ny = 1 / scalePoints[1];
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		for (int x = 0; x < w; x++) {
+			int xn = (int) (x * nx);
+			if (x >= 0 && x < original.getWidth())
+				for (int y = 0; y < h; y++) {
+					if (y >= 0 && y < original.getHeight())
+						outRaster.setPixel(x, y, inRaster.getPixel(xn, (int) (y * ny), i));
+				}
+		}
+	}
+
+	public static void scale(BufferedImage original, BufferedImage debugImage, float[] scalePoints, int j, int k) {
+		// TODO Auto-generated method stub
+
 	}
 }

@@ -3,8 +3,11 @@ package iw;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -23,22 +26,38 @@ public class MainWindow extends JFrame {
 
 	private float distortPoints[][] = new float[4][2];
 
+	private char scaleNames[] = { 'x', 'y'};
+	private float scalePoints[] = new float[2];
+
 	private enum modeType {
-		DISTORT, EUCLIDEAN
+		DISTORT, SCALE_NEAREST_NEIGHBOUR
 	};
 
-	private JComboBox<modeType> modeCombobox = new JComboBox<>(new modeType[] { modeType.DISTORT, modeType.EUCLIDEAN });
+	private JComboBox<modeType> modeCombobox = new JComboBox<>(new modeType[] { modeType.DISTORT, modeType.SCALE_NEAREST_NEIGHBOUR });
+	private Font f = new Font("Arial", Font.BOLD, 18);
 
 	public MainWindow(BufferedImage i) {
+		modeCombobox.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				repaintEmAll();
+			}
+		});
 		original = i;
 		transformImage = new BufferedImage(i.getWidth(), i.getHeight(), i.getType());
 		debugImage = new BufferedImage(i.getWidth(), i.getHeight(), i.getType());
 		transformPanel = new BuffViewer(transformImage);
 		debugPanel = new BuffViewer(debugImage);
+
 		distortPoints[1][0] = i.getWidth();
 		distortPoints[2][0] = i.getWidth();
 		distortPoints[2][1] = i.getHeight();
 		distortPoints[3][1] = i.getHeight();
+		
+		scalePoints[0] = 1;
+		scalePoints[1] = 1;
+
 		Graphics g = transformImage.getGraphics();
 		g.drawImage(i, 0, 0, null);
 		g.dispose();
@@ -72,6 +91,10 @@ public class MainWindow extends JFrame {
 						distortPoints[n][1] = arg0.getY();
 						Transformer.distort(original, transformImage, distortPoints);
 						Transformer.distort_debug(original, debugImage, distortPoints, 70, 70);
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+						scalePoints[n] = xToScale(arg0.getX());
+						Transformer.scale(original, transformImage, scalePoints);
+						Transformer.scale(original, debugImage, scalePoints, 70, 70);
 					}
 					repaintEmAll();
 					super.mouseDragged(arg0);
@@ -98,6 +121,19 @@ public class MainWindow extends JFrame {
 							g.drawImage(original, 0, 0, null);
 							g.dispose();
 						}
+					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+						if (arg0.getButton() == MouseEvent.BUTTON1) {
+							for (int i = 0; i < scalePoints.length; i++)
+								if (arg0.getX() >= (int) (scaleToX(scalePoints[i]) - handleSize / 2)
+										&& arg0.getX() <= (int) (scaleToX(scalePoints[i]) + handleSize / 2))
+									n = i;
+						} else if (arg0.getButton() == MouseEvent.BUTTON3) {
+							scalePoints[0] = 1;
+							scalePoints[1] = 1;
+							Graphics g = transformImage.getGraphics();
+							g.drawImage(original, 0, 0, null);
+							g.dispose();
+						}
 					}
 					repaintEmAll();
 					super.mouseReleased(arg0);
@@ -116,8 +152,28 @@ public class MainWindow extends JFrame {
 					arg0.fillOval((int) distortPoints[i][0] - handleSize / 2,
 							(int) distortPoints[i][1] - handleSize / 2, handleSize, handleSize);
 				}
+			} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR)) {
+				arg0.setFont(f);
+				for (int i = 0; i < scalePoints.length; i++) {
+					arg0.setColor(Color.BLUE);
+					if (i == n)
+						arg0.setColor(Color.RED);
+					float x = (int) scaleToX(scalePoints[i]);
+					float y = i * (original.getHeight() - 50) / scalePoints.length + 25;
+					arg0.drawString(scaleNames[i] + ": "+scalePoints[i], (int) x, (int) y - handleSize / 3 * 2);
+					arg0.fillOval((int) x, (int) y, handleSize, handleSize);
+				}
 			}
 		};
 
 	}
+
+	float scaleToX(float ec) {
+		return ec * (original.getWidth() - 50) + 25;
+	}
+
+	float xToScale(float x) {
+		return x / (original.getWidth() - 25);
+	}
+
 }
