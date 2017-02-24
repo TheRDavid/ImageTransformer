@@ -28,9 +28,10 @@ public class MainWindow extends JFrame {
 
 	private char scaleNames[] = { 'x', 'y' };
 	private float scalePoints[] = new float[2];
+	private float angle = 0;
 
 	private enum modeType {
-		DISTORT, SCALE_NEAREST_NEIGHBOUR_BACKWARD, SCALE_NEAREST_NEIGHBOUR_FORWARD, SCALE_BILINEAR_BACKWARD
+		DISTORT, SCALE_NEAREST_NEIGHBOUR_BACKWARD, SCALE_NEAREST_NEIGHBOUR_FORWARD, SCALE_BILINEAR_BACKWARD, ROTATE_NEAREST_NEIGHBOUR_FORWARD, ROTATE_NEAREST_NEIGHBOUR_BACKWARD, ROTATE_BILINEAR_BACKWARD
 	};
 
 	private JComboBox<modeType> modeCombobox = new JComboBox<>(modeType.values());
@@ -94,15 +95,21 @@ public class MainWindow extends JFrame {
 					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_BACKWARD)) {
 						scalePoints[n] = xToScale(arg0.getX());
 						Transformer.scale_nn_backward(original, transformImage, scalePoints);
-						Transformer.scale_nn_backward_debug(original, debugImage, scalePoints, 70, 70);
 					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_NEAREST_NEIGHBOUR_FORWARD)) {
 						scalePoints[n] = xToScale(arg0.getX());
 						Transformer.scale_nn_forward(original, transformImage, scalePoints);
-						Transformer.scale_nn_forward_debug(original, debugImage, scalePoints, 70, 70);
 					} else if (modeCombobox.getSelectedItem().equals(modeType.SCALE_BILINEAR_BACKWARD)) {
 						scalePoints[n] = xToScale(arg0.getX());
 						Transformer.scale_bl_backward(original, transformImage, scalePoints);
-						Transformer.scale_nn_forward_debug(original, debugImage, scalePoints, 70, 70);
+					} else if (modeCombobox.getSelectedItem().equals(modeType.ROTATE_NEAREST_NEIGHBOUR_FORWARD)) {
+						angle = xToAngle(arg0.getX());
+						Transformer.rotate_nn_forward(original, transformImage, (float) Math.toRadians(angle));
+					} else if (modeCombobox.getSelectedItem().equals(modeType.ROTATE_NEAREST_NEIGHBOUR_BACKWARD)) {
+						angle = xToAngle(arg0.getX());
+						Transformer.rotate_nn_backward(original, transformImage, (float) Math.toRadians(angle));
+					} else if (modeCombobox.getSelectedItem().equals(modeType.ROTATE_BILINEAR_BACKWARD)) {
+						angle = xToAngle(arg0.getX());
+						Transformer.rotate_bil_backward(original, transformImage, (float) Math.toRadians(angle));
 					}
 					repaintEmAll();
 					super.mouseDragged(arg0);
@@ -175,6 +182,13 @@ public class MainWindow extends JFrame {
 					arg0.drawString(scaleNames[i] + ": " + scalePoints[i], (int) x, (int) y - handleSize / 3 * 2);
 					arg0.fillOval((int) x, (int) y, handleSize, handleSize);
 				}
+			} else if (modeCombobox.getSelectedItem().equals(modeType.ROTATE_BILINEAR_BACKWARD)
+					|| modeCombobox.getSelectedItem().equals(modeType.ROTATE_NEAREST_NEIGHBOUR_FORWARD)
+					|| modeCombobox.getSelectedItem().equals(modeType.ROTATE_NEAREST_NEIGHBOUR_BACKWARD)) {
+				arg0.setColor(Color.WHITE);
+				float x = (int) angleToX(angle);
+				arg0.drawString("deg: " + angle, (int) x, original.getHeight() / 2 - 40);
+				arg0.fillOval((int) x, original.getHeight() / 2, handleSize, handleSize);
 			}
 		};
 
@@ -186,6 +200,14 @@ public class MainWindow extends JFrame {
 
 	float xToScale(float x) {
 		return x / (original.getWidth() / 3 - 25);
+	}
+
+	float angleToX(float a) {
+		return a * original.getWidth() / 360;
+	}
+
+	float xToAngle(float x) {
+		return x / original.getWidth() * 360;
 	}
 
 }

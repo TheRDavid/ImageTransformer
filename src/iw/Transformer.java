@@ -124,11 +124,6 @@ public class Transformer {
 		}
 	}
 
-	public static void scale_nn_forward_debug(BufferedImage original, BufferedImage debugImage, float[] scalePoints,
-			int j, int k) {
-
-	}
-
 	public static void scale_nn_backward(BufferedImage original, BufferedImage transformImage, float[] scalePoints) {
 		Graphics g = transformImage.getGraphics();
 		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
@@ -160,8 +155,11 @@ public class Transformer {
 		for (int x = 0; x < w; x++) {
 			float oldCol = nx * x;
 			int leftCol = (int) Math.floor(oldCol);
+			leftCol = leftCol >= 0 ? leftCol : 0;
+			leftCol = leftCol < original.getWidth() ? leftCol : original.getWidth() - 1;
 			int rightCol = (int) Math.ceil(oldCol);
 			rightCol = rightCol < original.getWidth() ? rightCol : original.getWidth() - 1;
+			rightCol = rightCol >= 0 ? rightCol : 0;
 			double rightShare = oldCol % 1;
 			double leftShare = (1 - rightShare);
 			if (x >= 0 && x < original.getWidth())
@@ -170,8 +168,11 @@ public class Transformer {
 					double lowerShare = oldRow % 1;
 					double upperShare = (1 - lowerShare);
 					int upperRow = (int) Math.floor(oldRow);
+					upperRow = upperRow >= 0 ? upperRow : 0;
+					upperRow = upperRow < original.getHeight() ? upperRow : original.getHeight() - 1;
 					int lowerRow = (int) Math.ceil(oldRow);
 					lowerRow = lowerRow < original.getHeight() ? lowerRow : original.getHeight() - 1;
+					lowerRow = lowerRow >= 0 ? lowerRow : 0;
 
 					int interpolatedColor[] = new int[i.length];
 					for (int ink = 0; ink < i.length; ink++) {
@@ -189,8 +190,99 @@ public class Transformer {
 		}
 	}
 
-	public static void scale_nn_backward_debug(BufferedImage original, BufferedImage debugImage, float[] scalePoints,
-			int j, int k) {
+	public static void rotate_nn_forward(BufferedImage original, BufferedImage transformImage, float angle) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		int widthDivBy2 = original.getWidth() / 2;
+		int heightDivBy2 = original.getHeight() / 2;
+		double sDeg = Math.sin(angle), cDeg = Math.cos(angle);
+		for (int x = 0; x < original.getWidth(); x++) {
+			int xt = x - widthDivBy2;
+			for (int y = 0; y < original.getHeight(); y++) {
+				int yt = y - heightDivBy2;
 
+				int xn = (int) Math.round(xt * cDeg - yt * sDeg) + widthDivBy2; // calculate the new COORDINATES
+				int yn = (int) Math.round(xt * sDeg + yt * cDeg) + heightDivBy2;
+
+				if (xn >= 0 && xn < original.getWidth() && yn >= 0 && yn < original.getHeight())
+					outRaster.setPixel(xn, yn, inRaster.getPixel(x, y, i));
+			}
+		}
+	}
+
+	public static void rotate_nn_backward(BufferedImage original, BufferedImage transformImage, float angle) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		int widthDivBy2 = original.getWidth() / 2;
+		int heightDivBy2 = original.getHeight() / 2;
+		double sDeg = Math.sin(angle), cDeg = Math.cos(angle);
+		for (int x = 0; x < original.getWidth(); x++) {
+			int xt = x - widthDivBy2;
+			for (int y = 0; y < original.getHeight(); y++) {
+				int yt = y - heightDivBy2;
+
+				int xn = (int) Math.round(xt * cDeg - yt * sDeg) + widthDivBy2; // calculate the new COORDINATES
+				int yn = (int) Math.round(xt * sDeg + yt * cDeg) + heightDivBy2;
+
+				if (xn >= 0 && xn < original.getWidth() && yn >= 0 && yn < original.getHeight())
+					outRaster.setPixel(x, y, inRaster.getPixel(xn, yn, i));
+			}
+		}
+	}
+
+	public static void rotate_bil_backward(BufferedImage original, BufferedImage transformImage, float angle) {
+		Graphics g = transformImage.getGraphics();
+		g.clearRect(0, 0, transformImage.getWidth(), transformImage.getHeight()); // clear
+		inRaster = original.getRaster();
+		outRaster = transformImage.getRaster();
+		int widthDivBy2 = original.getWidth() / 2;
+		int heightDivBy2 = original.getHeight() / 2;
+		double sDeg = Math.sin(angle), cDeg = Math.cos(angle);
+		for (int x = 0; x < original.getWidth(); x++) {
+			int xt = x - widthDivBy2;
+			for (int y = 0; y < original.getHeight(); y++) {
+				int yt = y - heightDivBy2;
+
+				double xn =  xt * cDeg - yt * sDeg + widthDivBy2; // calculate the new COORDINATES
+				double yn = xt * sDeg + yt * cDeg + heightDivBy2;
+				
+				//interpolate
+
+				int leftCol = (int) Math.floor(xn);
+				leftCol = leftCol >= 0 ? leftCol : 0;
+				leftCol = leftCol < original.getWidth() ? leftCol : original.getWidth() - 1;
+				int rightCol = (int) Math.ceil(xn);
+				rightCol = rightCol < original.getWidth() ? rightCol : original.getWidth() - 1;
+				rightCol = rightCol >= 0 ? rightCol : 0;
+				double rightShare =  xn % 1;
+				double leftShare = (1 - rightShare);
+
+				double lowerShare = yn % 1;
+				double upperShare = (1 - lowerShare);
+				int upperRow = (int) Math.floor(yn);
+				upperRow = upperRow >= 0 ? upperRow : 0;
+				upperRow = upperRow < original.getHeight() ? upperRow : original.getHeight() - 1;
+				int lowerRow = (int) Math.ceil(yn);
+				lowerRow = lowerRow < original.getHeight() ? lowerRow : original.getHeight() - 1;
+				lowerRow = lowerRow >= 0 ? lowerRow : 0;
+				
+				int interpolatedColor[] = new int[i.length];
+				for (int ink = 0; ink < i.length; ink++) {
+					interpolatedColor[ink] += inRaster.getPixel(leftCol, upperRow, i)[ink] * upperShare * leftShare;
+					interpolatedColor[ink] += inRaster.getPixel(rightCol, upperRow, i)[ink] * upperShare
+							* rightShare;
+					interpolatedColor[ink] += inRaster.getPixel(leftCol, lowerRow, i)[ink] * lowerShare * leftShare;
+					interpolatedColor[ink] += inRaster.getPixel(rightCol, lowerRow, i)[ink] * lowerShare
+							* rightShare;
+				}
+
+				if (xn >= 0 && xn < original.getWidth() && yn >= 0 && yn < original.getHeight())
+					outRaster.setPixel(x, y, interpolatedColor);
+			}
+		}
 	}
 }
